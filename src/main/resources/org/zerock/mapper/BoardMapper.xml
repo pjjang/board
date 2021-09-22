@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.zerock.mapper.BoardMapper">
+	
+<sql id="criteria">
+	<trim prefix="(" suffix=") and">
+	<foreach collection="typeArr" item="type" separator="OR" open="(" close=")">
+		<if test="type == 'T'.toString()">
+			title like concat('%',#{keyword},'%')
+		</if>
+		<if test="type == 'C'.toString()">
+			content like concat('%',#{keyword},'%')
+		</if> 
+		<if test="type == 'W'.toString()">
+			writer like concat('%',#{keyword},'%')
+		</if>  
+	</foreach>	
+	</trim>
+</sql>	
+	
+	<select id="getList" resultType="org.zerock.domain.BoardVO">
+		select * from tbl_board 
+	</select>
+	
+	<select id="getListWithPaging" resultType="org.zerock.domain.BoardVO">
+	<![CDATA[	
+		  SELECT R.*
+		  FROM(
+		        SELECT S.*
+		        FROM (
+		                SELECT ROW_NUMBER() OVER(ORDER BY BNO DESC) AS RNUM
+		                     , BNO
+		                     , TITLE
+		                     , CONTENT
+		                     , WRITER
+		                     , REGDATE
+		                     , UPDATEDATE 
+		                  FROM TBL_BOARD
+		             ) S
+		   
+		 		 WHERE
+	]]> 
+	
+	<trim prefix="(" suffix=") and">
+	<foreach collection="typeArr" item="type" separator="OR" open="(" close=")">
+		<if test="type == 'T'.toString()">
+			title like concat('%',#{keyword},'%')
+		</if>
+		<if test="type == 'C'.toString()">
+			content like concat('%',#{keyword},'%')
+		</if> 
+		<if test="type == 'W'.toString()">
+			writer like concat('%',#{keyword},'%')
+		</if>  
+	</foreach>	
+	</trim>
+	
+	<![CDATA[	
+		       S.BNO > 0 
+		         AND S.RNUM > 0 
+		         AND S.RNUM <= (#{pageNum} * #{amount})
+		   ) R
+		   WHERE R.RNUM > (#{pageNum} -1) * #{amount}
+	]]>
+	</select>
+	
+	<select id="searchTest" resultType="org.zerock.domain.BoardVO">
+	<![CDATA[
+			    SELECT S.*
+		        FROM (
+		                SELECT ROW_NUMBER() OVER(ORDER BY BNO DESC) AS RNUM
+		                     , BNO
+		                     , TITLE
+		                     , CONTENT
+		                     , WRITER
+		                     , REGDATE
+		                     , UPDATEDATE 
+		                  FROM TBL_BOARD
+		             ) S
+	where
+	]]>
+	
+	<trim suffix="and">
+	<foreach collection="map" index="key" item="val" separator="OR" open="(" close=")">
+		<if test="key == 'T'.toString()">
+			title like #{val}
+		</if>
+		<if test="key == 'C'.toString()">
+			content like #{val}
+		</if>
+		<if test="key == 'T'.toString()">
+			writer like #{val}
+		</if>
+	</foreach>
+	</trim>
+
+	<![CDATA[
+		S.RNUM < 10
+	]]>
+	
+	</select>
+	
+	<select id="getTotalCount" resultType="int">
+		select count(bno) from tbl_board where 
+		<include refid="criteria"></include>
+		bno > 0
+	</select>
+
+	
+	<insert id="insert">
+		insert into tbl_board ( title, content, writer, regdate, updatedate)
+		value ( #{title}, #{content}, #{writer}, now(), now())
+	</insert>
+	
+	<insert id="insertSelectKey">
+		<selectKey order="BEFORE" keyProperty="bno" resultType="long"> 
+		SELECT MAX(bno)+1 as bno FROM tbl_board   
+		</selectKey>
+		insert into tbl_board ( title, content, writer, regdate, updatedate)
+		value ( #{title}, #{content}, #{writer}, now(), now())
+	</insert>
+	
+	<select id="read" resultType="org.zerock.domain.BoardVO">
+		select * from tbl_board where bno = #{bno}
+	</select>
+	
+	<delete id="delete">
+		delete from tbl_board where bno = #{bno}
+	</delete>
+	
+	<update id="update">
+		update tbl_board
+		set
+		   title = #{title},
+		   content = #{content},
+		   writer = #{writer},
+		   updatedate = now()
+		 where bno = #{bno}
+	</update>
+</mapper>
